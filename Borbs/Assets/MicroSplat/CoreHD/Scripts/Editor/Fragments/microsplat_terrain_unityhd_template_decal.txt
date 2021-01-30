@@ -1,0 +1,1438 @@
+﻿
+// ADDITIONAL MODIFICATIONS REQUIRED
+// FragInputs and SurfaceDescriptionInputs need to be inout
+// and apply TBN matrix back to FragInputs for normal blending
+
+
+        Pass
+        { 
+            // based on DecalPass.template
+            Name "ShaderGraph_DBufferProjector3RT"
+            Tags { "LightMode" = "ShaderGraph_DBufferProjector3RT" }
+        
+            //-------------------------------------------------------------------------------------
+            // Render Modes (Blend, Cull, ZTest, Stencil, etc)
+            //-------------------------------------------------------------------------------------
+            Blend 0 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 1 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 2 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha
+        
+            Cull Front
+        
+            ZTest Greater
+        
+            ZWrite Off
+        
+            
+            // Stencil setup
+        Stencil
+        {
+           WriteMask 8
+           Ref  8
+        Comp Always
+        Pass Replace
+        }
+        
+            ColorMask BA 2 ColorMask 0 3
+        
+            //-------------------------------------------------------------------------------------
+            // End Render Modes
+            //-------------------------------------------------------------------------------------
+        
+            HLSLPROGRAM
+        
+            #pragma target 4.5
+            #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+            //#pragma enable_d3d11_debug_symbols
+        
+            #pragma multi_compile_instancing
+        
+            //-------------------------------------------------------------------------------------
+            // Variant Definitions (active field translations to HDRP defines)
+            //-------------------------------------------------------------------------------------
+            #define _MATERIAL_AFFECTS_ALBEDO 1
+            #define _MATERIAL_AFFECTS_NORMAL 1
+            #define _MATERIAL_AFFECTS_MASKMAP 1
+            #define _MATERIAL_AFFECTS_EMISSION 1
+        
+            //-------------------------------------------------------------------------------------
+            // End Variant Definitions
+            //-------------------------------------------------------------------------------------
+        
+        //MS_DEFINES
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/FragInputs.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPass.cs.hlsl"
+        
+
+            //-------------------------------------------------------------------------------------
+            // Defines
+            //-------------------------------------------------------------------------------------
+                    #define SHADERPASS SHADERPASS_DBUFFER_PROJECTOR
+                #define DECALS_3RT
+                
+        
+            // this translates the new dependency tracker into the old preprocessor definitions for the existing HDRP shader code
+            #define ATTRIBUTES_NEED_NORMAL
+            #define ATTRIBUTES_NEED_TANGENT
+            #define ATTRIBUTES_NEED_TEXCOORD0
+            // #define ATTRIBUTES_NEED_TEXCOORD1
+            // #define ATTRIBUTES_NEED_TEXCOORD2
+            // #define ATTRIBUTES_NEED_TEXCOORD3
+            #define ATTRIBUTES_NEED_COLOR
+            #define VARYINGS_NEED_POSITION_WS
+            #define VARYINGS_NEED_TANGENT_TO_WORLD
+            #define VARYINGS_NEED_TEXCOORD0
+            // #define VARYINGS_NEED_TEXCOORD1
+            // #define VARYINGS_NEED_TEXCOORD2
+            // #define VARYINGS_NEED_TEXCOORD3
+            #define VARYINGS_NEED_COLOR
+            // #define VARYINGS_NEED_CULLFACE
+            // #define HAVE_MESH_MODIFICATION
+        
+            //-------------------------------------------------------------------------------------
+            // End Defines
+            //-------------------------------------------------------------------------------------
+        
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+        #ifdef DEBUG_DISPLAY
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+        #endif
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/MaterialUtilities.hlsl"
+            #include "Packages/com.unity.shadergraph/ShaderGraphLibrary/Functions.hlsl" 
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/Decal/Decal.hlsl"
+        
+            
+
+        //MS_ADAPTER
+
+            //-------------------------------------------------------------------------------------
+            // Graph generated code
+            //-------------------------------------------------------------------------------------
+                    // Shared Graph Properties (uniform inputs)
+                    CBUFFER_START(UnityPerMaterial)
+                    float _DrawOrder;
+                    float _DecalMeshDepthBias;
+                    //MS_CBUFFER
+                    CBUFFER_END
+                
+
+                // Pixel Graph Inputs
+                    struct SurfaceDescriptionInputs {
+                        float3 WorldSpaceNormal; // optional
+                        float3 WorldSpaceTangent; // optional
+                        float3 WorldSpaceBiTangent; // optional
+                        float3 WorldSpaceViewDirection; // optional
+                        float3 TangentSpaceViewDirection; // optional
+                        float3 WorldSpacePosition; // optional
+                        float4 uv0; // optional
+                        float4 VertexColor; // optional
+                    };
+                // Pixel Graph Outputs
+                    struct SurfaceDescription
+                    {
+                        float3 Albedo;
+                        float AlphaAlbedo;
+                        float3 Normal;
+                        float AlphaNormal;
+                        float Metallic;
+                        float Occlusion;
+                        float Smoothness;
+                        float3 Specular;
+                        float MAOSOpacity;
+                    };
+                    
+                // Shared Graph Node Functions
+                
+                 //MS_SHARED_INC
+                    
+                    //MS_SHARED_HD
+                     
+                    //MS_VERTEXMOD
+
+                    //MS_AFTERVERTEX
+
+                    //MS_TERRAIN_BODY
+
+                    //MS_BLENDABLE
+
+                    //MS_MAINFUNC
+
+                    SurfaceDescription SurfaceDescriptionFunction(MeshToPS m2ps, inout SurfaceDescriptionInputs IN)
+                    {
+                        MicroSplatLayer l = DoMicroSplat(IN, m2ps);
+
+                        SurfaceDescription surface = (SurfaceDescription)0;
+                        surface.Albedo = l.Albedo;
+                        surface.Normal = l.Normal;
+                        surface.Smoothness = l.Smoothness;
+                        #if _USESPECULARWORKFLOW
+                           surface.Specular = l.Specular;
+                        #endif
+                        surface.Metallic = l.Metallic;
+                        surface.Occlusion = l.Occlusion;
+
+                        surface.AlphaAlbedo = l.Alpha;
+                        surface.AlphaNormal = l.Alpha;
+                        surface.MAOSOpacity = l.Alpha;
+                        return surface;
+                    }
+                    
+            //-------------------------------------------------------------------------------------
+            // End graph generated code
+            //-------------------------------------------------------------------------------------
+        
+        // $include("VertexAnimation.template.hlsl")
+        
+        
+        //-------------------------------------------------------------------------------------
+        // TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+            FragInputs BuildFragInputs(MeshToPS input)
+            {
+                FragInputs output;
+                ZERO_INITIALIZE(FragInputs, output);
+        
+                // Init to some default value to make the computer quiet (else it output 'divide by zero' warning even if value is not used).
+                // TODO: this is a really poor workaround, but the variable is used in a bunch of places
+                // to compute normals which are then passed on elsewhere to compute other values...
+                output.tangentToWorld = k_identity3x3;
+                output.positionSS = input.positionCS;       // input.positionCS is SV_Position
+        
+                output.positionRWS = input.positionRWS;
+                output.tangentToWorld = BuildTangentToWorld(input.tangentWS, input.normalWS);
+                output.texCoord0 = input.texCoord0;
+                // output.texCoord1 = input.texCoord1;
+                // output.texCoord2 = input.texCoord2;
+                // output.texCoord3 = input.texCoord3;
+                output.color = input.color;
+                #if _DOUBLESIDED_ON && SHADER_STAGE_FRAGMENT
+                output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #elif SHADER_STAGE_FRAGMENT
+                // output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #endif // SHADER_STAGE_FRAGMENT
+        
+                return output;
+            }
+        
+            SurfaceDescriptionInputs FragInputsToSurfaceDescriptionInputs(FragInputs input, float3 viewWS)
+            {
+                SurfaceDescriptionInputs output;
+                ZERO_INITIALIZE(SurfaceDescriptionInputs, output);
+        
+                output.WorldSpaceNormal =            normalize(input.tangentToWorld[2].xyz);
+                // output.ObjectSpaceNormal =           mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_M);           // transposed multiplication by inverse matrix to handle normal scale
+                // output.ViewSpaceNormal =             mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_I_V);         // transposed multiplication by inverse matrix to handle normal scale
+                // output.TangentSpaceNormal =          float3(0.0f, 0.0f, 1.0f);
+                output.WorldSpaceTangent =           input.tangentToWorld[0].xyz;
+                // output.ObjectSpaceTangent =          TransformWorldToObjectDir(output.WorldSpaceTangent);
+                // output.ViewSpaceTangent =            TransformWorldToViewDir(output.WorldSpaceTangent);
+                // output.TangentSpaceTangent =         float3(1.0f, 0.0f, 0.0f);
+                output.WorldSpaceBiTangent =         input.tangentToWorld[1].xyz;
+                // output.ObjectSpaceBiTangent =        TransformWorldToObjectDir(output.WorldSpaceBiTangent);
+                // output.ViewSpaceBiTangent =          TransformWorldToViewDir(output.WorldSpaceBiTangent);
+                // output.TangentSpaceBiTangent =       float3(0.0f, 1.0f, 0.0f);
+                output.WorldSpaceViewDirection =     normalize(viewWS);
+                // output.ObjectSpaceViewDirection =    TransformWorldToObjectDir(output.WorldSpaceViewDirection);
+                // output.ViewSpaceViewDirection =      TransformWorldToViewDir(output.WorldSpaceViewDirection);
+                float3x3 tangentSpaceTransform =     float3x3(output.WorldSpaceTangent,output.WorldSpaceBiTangent,output.WorldSpaceNormal);
+                output.TangentSpaceViewDirection =   mul(tangentSpaceTransform, output.WorldSpaceViewDirection);
+                output.WorldSpacePosition =          (input.positionRWS);
+                // output.ObjectSpacePosition =         TransformWorldToObject(input.positionRWS);
+                // output.ViewSpacePosition =           TransformWorldToView(input.positionRWS);
+                // output.TangentSpacePosition =        float3(0.0f, 0.0f, 0.0f);
+                // output.ScreenPosition =              ComputeScreenPos(TransformWorldToHClip(input.positionRWS), _ProjectionParams.x);
+                output.uv0 =                         input.texCoord0;
+                // output.uv1 =                         input.texCoord1;
+                // output.uv2 =                         input.texCoord2;
+                // output.uv3 =                         input.texCoord3;
+                output.VertexColor =                 input.color;
+                // output.FaceSign =                    input.isFrontFace;
+                // output.TimeParameters =              _TimeParameters.xyz; // This is mainly for LW as HD overwrite this value
+        
+                return output;
+            }
+        
+            // existing HDRP code uses the combined function to go directly from packed to frag inputs
+            FragInputs UnpackVaryingsMeshToFragInputs(MeshToPS input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return BuildFragInputs(input);
+            }
+        
+        //-------------------------------------------------------------------------------------
+        // END TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+        
+        
+            void GetSurfaceData(MeshToPS m2ps, inout FragInputs fragInputs, float3 V, PositionInputs posInput, out DecalSurfaceData surfaceData)
+            {
+        #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) || (SHADERPASS == SHADERPASS_FORWARD_EMISSIVE_PROJECTOR)
+                float4x4 normalToWorld = UNITY_ACCESS_INSTANCED_PROP(Decal, _NormalToWorld);
+                float fadeFactor = clamp(normalToWorld[0][3], 0.0f, 1.0f);
+                float2 scale = float2(normalToWorld[3][0], normalToWorld[3][1]);
+                float2 offset = float2(normalToWorld[3][2], normalToWorld[3][3]);
+                fragInputs.texCoord0.xy = fragInputs.texCoord0.xy * scale + offset;
+                fragInputs.texCoord1.xy = fragInputs.texCoord1.xy * scale + offset;
+                fragInputs.texCoord2.xy = fragInputs.texCoord2.xy * scale + offset;
+                //fragInputs.texCoord3.xy = fragInputs.texCoord3.xy * scale + offset;
+        #else
+                float fadeFactor = 1.0;
+        #endif
+                SurfaceDescriptionInputs surfaceDescriptionInputs = FragInputsToSurfaceDescriptionInputs(fragInputs, V);
+                SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(m2ps, surfaceDescriptionInputs);
+                fragInputs.tangentToWorld = float3x3(surfaceDescriptionInputs.WorldSpaceTangent, surfaceDescriptionInputs.WorldSpaceBiTangent, surfaceDescriptionInputs.WorldSpaceNormal);
+
+                // setup defaults -- these are used if the graph doesn't output a value
+                ZERO_INITIALIZE(DecalSurfaceData, surfaceData);
+        
+        #if _MATERIAL_AFFECTS_EMISSION
+                // surfaceData.emissive.rgb = surfaceDescription.Emission.rgb * fadeFactor;
+        #endif
+        
+                // copy across graph values, if defined
+        #if _MATERIAL_AFFECTS_ALBEDO
+                surfaceData.baseColor.xyz = surfaceDescription.Albedo;
+                surfaceData.baseColor.w = surfaceDescription.AlphaAlbedo * fadeFactor;
+                if(surfaceData.baseColor.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_DIFFUSE;
+                    #endif
+                }
+        #endif
+        
+        #if _MATERIAL_AFFECTS_NORMAL
+            #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) 
+                surfaceData.normalWS.xyz = mul((float3x3)normalToWorld, surfaceDescription.Normal);
+            #elif (SHADERPASS == SHADERPASS_DBUFFER_MESH) || (SHADERPASS == SHADERPASS_FORWARD_PREVIEW)
+                // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(surfaceDescription.Normal, fragInputs.tangentToWorld));
+            #endif
+                surfaceData.normalWS.w = surfaceDescription.AlphaNormal * fadeFactor;
+                if(surfaceData.normalWS.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_NORMAL;
+                    #endif
+                }
+        #else
+            #if (SHADERPASS == SHADERPASS_FORWARD_PREVIEW) // Default to vertex normal
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(float3(0.0, 0.0, 0.1), fragInputs.tangentToWorld));
+            #endif
+        #endif
+        
+        #if _MATERIAL_AFFECTS_MASKMAP
+                surfaceData.mask.z = surfaceDescription.Smoothness;                                    
+            #ifdef DECALS_4RT
+                surfaceData.mask.x = surfaceDescription.Metallic;
+                surfaceData.mask.y = surfaceDescription.Occlusion;
+            #endif
+        
+                surfaceData.mask.w = surfaceDescription.MAOSOpacity * fadeFactor;
+            #ifdef DECALS_4RT
+                surfaceData.MAOSBlend.x = surfaceDescription.MAOSOpacity * fadeFactor;
+                surfaceData.MAOSBlend.y = surfaceDescription.MAOSOpacity * fadeFactor;
+            #endif
+        
+            if (surfaceData.mask.w > 0)
+            {
+                #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                surfaceData.HTileMask |= DBUFFERHTILEBIT_MASK;
+                #endif
+            }                                                        
+        #endif
+        
+            }
+        
+            //-------------------------------------------------------------------------------------
+            // Pass Includes
+            //-------------------------------------------------------------------------------------
+                //MS_PASS_DECAL
+            //-------------------------------------------------------------------------------------
+            // End Pass Includes
+            //-------------------------------------------------------------------------------------
+        
+            ENDHLSL
+        }
+        
+        Pass
+        { 
+            // based on DecalPass.template
+            Name "ShaderGraph_DBufferProjector4RT"
+            Tags { "LightMode" = "ShaderGraph_DBufferProjector4RT" }
+        
+            //-------------------------------------------------------------------------------------
+            // Render Modes (Blend, Cull, ZTest, Stencil, etc)
+            //-------------------------------------------------------------------------------------
+            Blend 0 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 1 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 2 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 3 Zero OneMinusSrcColor
+        
+            Cull Front
+        
+            ZTest Greater
+        
+            ZWrite Off
+        
+            
+            // Stencil setup
+        Stencil
+        {
+           WriteMask 8
+           Ref  8
+        Comp Always
+        Pass Replace
+        }
+        
+            ColorMask RGBA 2 ColorMask RG 3
+        
+            //-------------------------------------------------------------------------------------
+            // End Render Modes
+            //-------------------------------------------------------------------------------------
+        
+            HLSLPROGRAM
+        
+            #pragma target 4.5
+            #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+            //#pragma enable_d3d11_debug_symbols
+        
+            #pragma multi_compile_instancing
+        
+            //-------------------------------------------------------------------------------------
+            // Variant Definitions (active field translations to HDRP defines)
+            //-------------------------------------------------------------------------------------
+            #define _MATERIAL_AFFECTS_ALBEDO 1
+            #define _MATERIAL_AFFECTS_NORMAL 1
+            #define _MATERIAL_AFFECTS_MASKMAP 1
+            #define _MATERIAL_AFFECTS_EMISSION 1
+        
+            //-------------------------------------------------------------------------------------
+            // End Variant Definitions
+            //-------------------------------------------------------------------------------------
+        
+        //MS_DEFINES
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/FragInputs.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPass.cs.hlsl"
+        
+            //-------------------------------------------------------------------------------------
+            // Defines
+            //-------------------------------------------------------------------------------------
+                    #define SHADERPASS SHADERPASS_DBUFFER_PROJECTOR
+                #define DECALS_4RT
+                
+        
+            // this translates the new dependency tracker into the old preprocessor definitions for the existing HDRP shader code
+            #define ATTRIBUTES_NEED_NORMAL
+            #define ATTRIBUTES_NEED_TANGENT
+            #define ATTRIBUTES_NEED_TEXCOORD0
+            // #define ATTRIBUTES_NEED_TEXCOORD1
+            // #define ATTRIBUTES_NEED_TEXCOORD2
+            // #define ATTRIBUTES_NEED_TEXCOORD3
+            #define ATTRIBUTES_NEED_COLOR
+            #define VARYINGS_NEED_POSITION_WS
+            #define VARYINGS_NEED_TANGENT_TO_WORLD
+            #define VARYINGS_NEED_TEXCOORD0
+            // #define VARYINGS_NEED_TEXCOORD1
+            // #define VARYINGS_NEED_TEXCOORD2
+            // #define VARYINGS_NEED_TEXCOORD3
+            #define VARYINGS_NEED_COLOR
+            // #define VARYINGS_NEED_CULLFACE
+            // #define HAVE_MESH_MODIFICATION
+        
+            //-------------------------------------------------------------------------------------
+            // End Defines
+            //-------------------------------------------------------------------------------------
+        
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+        #ifdef DEBUG_DISPLAY
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+        #endif
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/MaterialUtilities.hlsl"
+            #include "Packages/com.unity.shadergraph/ShaderGraphLibrary/Functions.hlsl" 
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/Decal/Decal.hlsl"
+        
+        
+        //MS_ADAPTER
+        
+            //-------------------------------------------------------------------------------------
+            // Graph generated code
+            //-------------------------------------------------------------------------------------
+                    // Shared Graph Properties (uniform inputs)
+                    CBUFFER_START(UnityPerMaterial)
+                    float _DrawOrder;
+                    float _DecalMeshDepthBias;
+                    //MS_CBUFFER
+                    CBUFFER_END
+                
+
+                // Pixel Graph Inputs
+                    struct SurfaceDescriptionInputs {
+                        float3 WorldSpaceNormal; // optional
+                        float3 WorldSpaceTangent; // optional
+                        float3 WorldSpaceBiTangent; // optional
+                        float3 WorldSpaceViewDirection; // optional
+                        float3 TangentSpaceViewDirection; // optional
+                        float3 WorldSpacePosition; // optional
+                        float4 uv0; // optional
+                        float4 VertexColor; // optional
+                    };
+                // Pixel Graph Outputs
+                    struct SurfaceDescription
+                    {
+                        float3 Albedo;
+                        float AlphaAlbedo;
+                        float3 Normal;
+                        float AlphaNormal;
+                        float Metallic;
+                        float Occlusion;
+                        float Smoothness;
+                        float3 Specular;
+                        float MAOSOpacity;
+                    };
+                    
+                // Shared Graph Node Functions
+                
+                 //MS_SHARED_INC
+                    
+                    //MS_SHARED_HD
+                     
+                    //MS_VERTEXMOD
+
+                    //MS_AFTERVERTEX
+
+                    //MS_TERRAIN_BODY
+
+                    //MS_BLENDABLE
+
+                    //MS_MAINFUNC
+
+                    SurfaceDescription SurfaceDescriptionFunction(MeshToPS m2ps, inout SurfaceDescriptionInputs IN)
+                    {
+                        MicroSplatLayer l = DoMicroSplat(IN, m2ps);
+
+                        SurfaceDescription surface = (SurfaceDescription)0;
+                        surface.Albedo = l.Albedo;
+                        surface.Normal = l.Normal;
+                        surface.Smoothness = l.Smoothness;
+                        #if _USESPECULARWORKFLOW
+                           surface.Specular = l.Specular;
+                        #endif
+                        surface.Metallic = l.Metallic;
+                        surface.Occlusion = l.Occlusion;
+
+                        surface.AlphaAlbedo = l.Alpha;
+                        surface.AlphaNormal = l.Alpha;
+                        surface.MAOSOpacity = l.Alpha;
+                        return surface;
+                    }
+                    
+            //-------------------------------------------------------------------------------------
+            // End graph generated code
+            //-------------------------------------------------------------------------------------
+        
+        // $include("VertexAnimation.template.hlsl")
+        
+        
+        //-------------------------------------------------------------------------------------
+        // TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+            FragInputs BuildFragInputs(MeshToPS input)
+            {
+                FragInputs output;
+                ZERO_INITIALIZE(FragInputs, output);
+        
+                // Init to some default value to make the computer quiet (else it output 'divide by zero' warning even if value is not used).
+                // TODO: this is a really poor workaround, but the variable is used in a bunch of places
+                // to compute normals which are then passed on elsewhere to compute other values...
+                output.tangentToWorld = k_identity3x3;
+                output.positionSS = input.positionCS;       // input.positionCS is SV_Position
+        
+                output.positionRWS = input.positionRWS;
+                output.tangentToWorld = BuildTangentToWorld(input.tangentWS, input.normalWS);
+                output.texCoord0 = input.texCoord0;
+                // output.texCoord1 = input.texCoord1;
+                // output.texCoord2 = input.texCoord2;
+                // output.texCoord3 = input.texCoord3;
+                output.color = input.color;
+                #if _DOUBLESIDED_ON && SHADER_STAGE_FRAGMENT
+                output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #elif SHADER_STAGE_FRAGMENT
+                // output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #endif // SHADER_STAGE_FRAGMENT
+        
+                return output;
+            }
+        
+            SurfaceDescriptionInputs FragInputsToSurfaceDescriptionInputs(FragInputs input, float3 viewWS)
+            {
+                SurfaceDescriptionInputs output;
+                ZERO_INITIALIZE(SurfaceDescriptionInputs, output);
+        
+                output.WorldSpaceNormal =            normalize(input.tangentToWorld[2].xyz);
+                // output.ObjectSpaceNormal =           mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_M);           // transposed multiplication by inverse matrix to handle normal scale
+                // output.ViewSpaceNormal =             mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_I_V);         // transposed multiplication by inverse matrix to handle normal scale
+                // output.TangentSpaceNormal =          float3(0.0f, 0.0f, 1.0f);
+                output.WorldSpaceTangent =           input.tangentToWorld[0].xyz;
+                // output.ObjectSpaceTangent =          TransformWorldToObjectDir(output.WorldSpaceTangent);
+                // output.ViewSpaceTangent =            TransformWorldToViewDir(output.WorldSpaceTangent);
+                // output.TangentSpaceTangent =         float3(1.0f, 0.0f, 0.0f);
+                output.WorldSpaceBiTangent =         input.tangentToWorld[1].xyz;
+                // output.ObjectSpaceBiTangent =        TransformWorldToObjectDir(output.WorldSpaceBiTangent);
+                // output.ViewSpaceBiTangent =          TransformWorldToViewDir(output.WorldSpaceBiTangent);
+                // output.TangentSpaceBiTangent =       float3(0.0f, 1.0f, 0.0f);
+                output.WorldSpaceViewDirection =     normalize(viewWS);
+                // output.ObjectSpaceViewDirection =    TransformWorldToObjectDir(output.WorldSpaceViewDirection);
+                // output.ViewSpaceViewDirection =      TransformWorldToViewDir(output.WorldSpaceViewDirection);
+                float3x3 tangentSpaceTransform =     float3x3(output.WorldSpaceTangent,output.WorldSpaceBiTangent,output.WorldSpaceNormal);
+                output.TangentSpaceViewDirection =   mul(tangentSpaceTransform, output.WorldSpaceViewDirection);
+                output.WorldSpacePosition =          (input.positionRWS);
+                // output.ObjectSpacePosition =         TransformWorldToObject(input.positionRWS);
+                // output.ViewSpacePosition =           TransformWorldToView(input.positionRWS);
+                // output.TangentSpacePosition =        float3(0.0f, 0.0f, 0.0f);
+                // output.ScreenPosition =              ComputeScreenPos(TransformWorldToHClip(input.positionRWS), _ProjectionParams.x);
+                output.uv0 =                         input.texCoord0;
+                // output.uv1 =                         input.texCoord1;
+                // output.uv2 =                         input.texCoord2;
+                // output.uv3 =                         input.texCoord3;
+                output.VertexColor =                 input.color;
+                // output.FaceSign =                    input.isFrontFace;
+                // output.TimeParameters =              _TimeParameters.xyz; // This is mainly for LW as HD overwrite this value
+        
+                return output;
+            }
+        
+            // existing HDRP code uses the combined function to go directly from packed to frag inputs
+            FragInputs UnpackVaryingsMeshToFragInputs(MeshToPS input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return BuildFragInputs(input);
+            }
+        
+        //-------------------------------------------------------------------------------------
+        // END TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+        
+        
+            void GetSurfaceData(MeshToPS m2ps, inout FragInputs fragInputs, float3 V, PositionInputs posInput, out DecalSurfaceData surfaceData)
+            {
+        #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) || (SHADERPASS == SHADERPASS_FORWARD_EMISSIVE_PROJECTOR)
+                float4x4 normalToWorld = UNITY_ACCESS_INSTANCED_PROP(Decal, _NormalToWorld);
+                float fadeFactor = clamp(normalToWorld[0][3], 0.0f, 1.0f);
+                float2 scale = float2(normalToWorld[3][0], normalToWorld[3][1]);
+                float2 offset = float2(normalToWorld[3][2], normalToWorld[3][3]);
+                fragInputs.texCoord0.xy = fragInputs.texCoord0.xy * scale + offset;
+                fragInputs.texCoord1.xy = fragInputs.texCoord1.xy * scale + offset;
+                fragInputs.texCoord2.xy = fragInputs.texCoord2.xy * scale + offset;
+                //fragInputs.texCoord3.xy = fragInputs.texCoord3.xy * scale + offset;
+        #else
+                float fadeFactor = 1.0;
+        #endif
+                SurfaceDescriptionInputs surfaceDescriptionInputs = FragInputsToSurfaceDescriptionInputs(fragInputs, V);
+                SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(m2ps, surfaceDescriptionInputs);
+                fragInputs.tangentToWorld = float3x3(surfaceDescriptionInputs.WorldSpaceTangent, surfaceDescriptionInputs.WorldSpaceBiTangent, surfaceDescriptionInputs.WorldSpaceNormal);
+        
+                // setup defaults -- these are used if the graph doesn't output a value
+                ZERO_INITIALIZE(DecalSurfaceData, surfaceData);
+        
+        #if _MATERIAL_AFFECTS_EMISSION
+                // surfaceData.emissive.rgb = surfaceDescription.Emission.rgb * fadeFactor;
+        #endif
+        
+                // copy across graph values, if defined
+        #if _MATERIAL_AFFECTS_ALBEDO
+                surfaceData.baseColor.xyz = surfaceDescription.Albedo;
+                surfaceData.baseColor.w = surfaceDescription.AlphaAlbedo * fadeFactor;
+                if(surfaceData.baseColor.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_DIFFUSE;
+                    #endif
+                }
+        #endif
+        
+        #if _MATERIAL_AFFECTS_NORMAL
+            #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) 
+                surfaceData.normalWS.xyz = mul((float3x3)normalToWorld, surfaceDescription.Normal);
+            #elif (SHADERPASS == SHADERPASS_DBUFFER_MESH) || (SHADERPASS == SHADERPASS_FORWARD_PREVIEW)
+                // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(surfaceDescription.Normal, fragInputs.tangentToWorld));
+            #endif
+                surfaceData.normalWS.w = surfaceDescription.AlphaNormal * fadeFactor;
+                if(surfaceData.normalWS.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_NORMAL;
+                    #endif
+                }
+        #else
+            #if (SHADERPASS == SHADERPASS_FORWARD_PREVIEW) // Default to vertex normal
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(float3(0.0, 0.0, 0.1), fragInputs.tangentToWorld));
+            #endif
+        #endif
+        
+        #if _MATERIAL_AFFECTS_MASKMAP
+                surfaceData.mask.z = surfaceDescription.Smoothness;                                    
+            #ifdef DECALS_4RT
+                surfaceData.mask.x = surfaceDescription.Metallic;
+                surfaceData.mask.y = surfaceDescription.Occlusion;
+            #endif
+        
+                surfaceData.mask.w = surfaceDescription.MAOSOpacity * fadeFactor;
+            #ifdef DECALS_4RT
+                surfaceData.MAOSBlend.x = surfaceDescription.MAOSOpacity * fadeFactor;
+                surfaceData.MAOSBlend.y = surfaceDescription.MAOSOpacity * fadeFactor;
+            #endif
+        
+            if (surfaceData.mask.w > 0)
+            {
+                #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                surfaceData.HTileMask |= DBUFFERHTILEBIT_MASK;
+                #endif
+            }                                                        
+        #endif
+        
+            }
+        
+            //-------------------------------------------------------------------------------------
+            // Pass Includes
+            //-------------------------------------------------------------------------------------
+                //MS_PASS_DECAL
+            //-------------------------------------------------------------------------------------
+            // End Pass Includes
+            //-------------------------------------------------------------------------------------
+        
+            ENDHLSL
+        }
+        
+        
+        Pass
+        { 
+            // based on DecalPass.template
+            Name "ShaderGraph_DBufferMesh3RT"
+            Tags { "LightMode" = "ShaderGraph_DBufferMesh3RT" }
+        
+            //-------------------------------------------------------------------------------------
+            // Render Modes (Blend, Cull, ZTest, Stencil, etc)
+            //-------------------------------------------------------------------------------------
+            Blend 0 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 1 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 2 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha
+        
+            
+            ZTest LEqual
+        
+            ZWrite Off
+        
+            
+            // Stencil setup
+        Stencil
+        {
+           WriteMask 8
+           Ref  8
+        Comp Always
+        Pass Replace
+        }
+        
+            ColorMask BA 2 ColorMask 0 3
+        
+            //-------------------------------------------------------------------------------------
+            // End Render Modes
+            //-------------------------------------------------------------------------------------
+        
+            HLSLPROGRAM
+        
+            #pragma target 4.5
+            #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+            //#pragma enable_d3d11_debug_symbols
+        
+            #pragma multi_compile_instancing
+        
+            //-------------------------------------------------------------------------------------
+            // Variant Definitions (active field translations to HDRP defines)
+            //-------------------------------------------------------------------------------------
+            #define _MATERIAL_AFFECTS_ALBEDO 1
+            #define _MATERIAL_AFFECTS_NORMAL 1
+            #define _MATERIAL_AFFECTS_MASKMAP 1
+            #define _MATERIAL_AFFECTS_EMISSION 1
+        
+            //-------------------------------------------------------------------------------------
+            // End Variant Definitions
+            //-------------------------------------------------------------------------------------
+        
+        //MS_DEFINES
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/FragInputs.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPass.cs.hlsl"
+        
+            //-------------------------------------------------------------------------------------
+            // Defines
+            //-------------------------------------------------------------------------------------
+                    #define SHADERPASS SHADERPASS_DBUFFER_MESH
+                #define DECALS_3RT
+                
+        
+            // this translates the new dependency tracker into the old preprocessor definitions for the existing HDRP shader code
+            #define ATTRIBUTES_NEED_NORMAL
+            #define ATTRIBUTES_NEED_TANGENT
+            #define ATTRIBUTES_NEED_TEXCOORD0
+            // #define ATTRIBUTES_NEED_TEXCOORD1
+            // #define ATTRIBUTES_NEED_TEXCOORD2
+            // #define ATTRIBUTES_NEED_TEXCOORD3
+            #define ATTRIBUTES_NEED_COLOR
+            #define VARYINGS_NEED_POSITION_WS
+            #define VARYINGS_NEED_TANGENT_TO_WORLD
+            #define VARYINGS_NEED_TEXCOORD0
+            // #define VARYINGS_NEED_TEXCOORD1
+            // #define VARYINGS_NEED_TEXCOORD2
+            // #define VARYINGS_NEED_TEXCOORD3
+            #define VARYINGS_NEED_COLOR
+            // #define VARYINGS_NEED_CULLFACE
+            // #define HAVE_MESH_MODIFICATION
+        
+            //-------------------------------------------------------------------------------------
+            // End Defines
+            //-------------------------------------------------------------------------------------
+        
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+        #ifdef DEBUG_DISPLAY
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+        #endif
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/MaterialUtilities.hlsl"
+            #include "Packages/com.unity.shadergraph/ShaderGraphLibrary/Functions.hlsl" 
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/Decal/Decal.hlsl"
+        
+        
+        //MS_ADAPTER
+
+            //-------------------------------------------------------------------------------------
+            // Graph generated code
+            //-------------------------------------------------------------------------------------
+                    // Shared Graph Properties (uniform inputs)
+                    CBUFFER_START(UnityPerMaterial)
+                    float _DrawOrder;
+                    float _DecalMeshDepthBias;
+                    //MS_CBUFFER
+                    CBUFFER_END
+
+                // Pixel Graph Inputs
+                    struct SurfaceDescriptionInputs {
+                        float3 WorldSpaceNormal; // optional
+                        float3 WorldSpaceTangent; // optional
+                        float3 WorldSpaceBiTangent; // optional
+                        float3 WorldSpaceViewDirection; // optional
+                        float3 TangentSpaceViewDirection; // optional
+                        float3 WorldSpacePosition; // optional
+                        float4 uv0; // optional
+                        float4 VertexColor; // optional
+                    };
+                // Pixel Graph Outputs
+                    struct SurfaceDescription
+                    {
+                        float3 Albedo;
+                        float AlphaAlbedo;
+                        float3 Normal;
+                        float AlphaNormal;
+                        float Metallic;
+                        float Occlusion;
+                        float Smoothness;
+                        float3 Specular;
+                        float MAOSOpacity;
+                    };
+                    
+                // Shared Graph Node Functions
+
+                 //MS_SHARED_INC
+                    
+                    //MS_SHARED_HD
+                     
+                    //MS_VERTEXMOD
+
+                    //MS_AFTERVERTEX
+
+                    //MS_TERRAIN_BODY
+
+                    //MS_BLENDABLE
+
+                    //MS_MAINFUNC
+
+                    SurfaceDescription SurfaceDescriptionFunction(MeshToPS m2ps, inout SurfaceDescriptionInputs IN)
+                    {
+                        MicroSplatLayer l = DoMicroSplat(IN, m2ps);
+
+                        SurfaceDescription surface = (SurfaceDescription)0;
+                        surface.Albedo = l.Albedo;
+                        surface.Normal = l.Normal;
+                        surface.Smoothness = l.Smoothness;
+                        #if _USESPECULARWORKFLOW
+                           surface.Specular = l.Specular;
+                        #endif
+                        surface.Metallic = l.Metallic;
+                        surface.Occlusion = l.Occlusion;
+
+                        surface.AlphaAlbedo = l.Alpha;
+                        surface.AlphaNormal = l.Alpha;
+                        surface.MAOSOpacity = l.Alpha;
+                        return surface;
+                    }
+                    
+            //-------------------------------------------------------------------------------------
+            // End graph generated code
+            //-------------------------------------------------------------------------------------
+        
+        // $include("VertexAnimation.template.hlsl")
+        
+        
+        //-------------------------------------------------------------------------------------
+        // TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+            FragInputs BuildFragInputs(MeshToPS input)
+            {
+                FragInputs output;
+                ZERO_INITIALIZE(FragInputs, output);
+        
+                // Init to some default value to make the computer quiet (else it output 'divide by zero' warning even if value is not used).
+                // TODO: this is a really poor workaround, but the variable is used in a bunch of places
+                // to compute normals which are then passed on elsewhere to compute other values...
+                output.tangentToWorld = k_identity3x3;
+                output.positionSS = input.positionCS;       // input.positionCS is SV_Position
+        
+                output.positionRWS = input.positionRWS;
+                output.tangentToWorld = BuildTangentToWorld(input.tangentWS, input.normalWS);
+                output.texCoord0 = input.texCoord0;
+                // output.texCoord1 = input.texCoord1;
+                // output.texCoord2 = input.texCoord2;
+                // output.texCoord3 = input.texCoord3;
+                output.color = input.color;
+                #if _DOUBLESIDED_ON && SHADER_STAGE_FRAGMENT
+                output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #elif SHADER_STAGE_FRAGMENT
+                // output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #endif // SHADER_STAGE_FRAGMENT
+        
+                return output;
+            }
+        
+            SurfaceDescriptionInputs FragInputsToSurfaceDescriptionInputs(FragInputs input, float3 viewWS)
+            {
+                SurfaceDescriptionInputs output;
+                ZERO_INITIALIZE(SurfaceDescriptionInputs, output);
+        
+                output.WorldSpaceNormal =            normalize(input.tangentToWorld[2].xyz);
+                // output.ObjectSpaceNormal =           mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_M);           // transposed multiplication by inverse matrix to handle normal scale
+                // output.ViewSpaceNormal =             mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_I_V);         // transposed multiplication by inverse matrix to handle normal scale
+                // output.TangentSpaceNormal =          float3(0.0f, 0.0f, 1.0f);
+                output.WorldSpaceTangent =           input.tangentToWorld[0].xyz;
+                // output.ObjectSpaceTangent =          TransformWorldToObjectDir(output.WorldSpaceTangent);
+                // output.ViewSpaceTangent =            TransformWorldToViewDir(output.WorldSpaceTangent);
+                // output.TangentSpaceTangent =         float3(1.0f, 0.0f, 0.0f);
+                output.WorldSpaceBiTangent =         input.tangentToWorld[1].xyz;
+                // output.ObjectSpaceBiTangent =        TransformWorldToObjectDir(output.WorldSpaceBiTangent);
+                // output.ViewSpaceBiTangent =          TransformWorldToViewDir(output.WorldSpaceBiTangent);
+                // output.TangentSpaceBiTangent =       float3(0.0f, 1.0f, 0.0f);
+                output.WorldSpaceViewDirection =     normalize(viewWS);
+                // output.ObjectSpaceViewDirection =    TransformWorldToObjectDir(output.WorldSpaceViewDirection);
+                // output.ViewSpaceViewDirection =      TransformWorldToViewDir(output.WorldSpaceViewDirection);
+                float3x3 tangentSpaceTransform =     float3x3(output.WorldSpaceTangent,output.WorldSpaceBiTangent,output.WorldSpaceNormal);
+                output.TangentSpaceViewDirection =   mul(tangentSpaceTransform, output.WorldSpaceViewDirection);
+                output.WorldSpacePosition =          (input.positionRWS);
+                // output.ObjectSpacePosition =         TransformWorldToObject(input.positionRWS);
+                // output.ViewSpacePosition =           TransformWorldToView(input.positionRWS);
+                // output.TangentSpacePosition =        float3(0.0f, 0.0f, 0.0f);
+                // output.ScreenPosition =              ComputeScreenPos(TransformWorldToHClip(input.positionRWS), _ProjectionParams.x);
+                output.uv0 =                         input.texCoord0;
+                // output.uv1 =                         input.texCoord1;
+                // output.uv2 =                         input.texCoord2;
+                // output.uv3 =                         input.texCoord3;
+                output.VertexColor =                 input.color;
+                // output.FaceSign =                    input.isFrontFace;
+                // output.TimeParameters =              _TimeParameters.xyz; // This is mainly for LW as HD overwrite this value
+        
+                return output;
+            }
+        
+            // existing HDRP code uses the combined function to go directly from packed to frag inputs
+            FragInputs UnpackVaryingsMeshToFragInputs(MeshToPS input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return BuildFragInputs(input);
+            }
+        
+        //-------------------------------------------------------------------------------------
+        // END TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+        
+        
+            void GetSurfaceData(MeshToPS m2ps, inout FragInputs fragInputs, float3 V, PositionInputs posInput, out DecalSurfaceData surfaceData)
+            {
+        #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) || (SHADERPASS == SHADERPASS_FORWARD_EMISSIVE_PROJECTOR)
+                float4x4 normalToWorld = UNITY_ACCESS_INSTANCED_PROP(Decal, _NormalToWorld);
+                float fadeFactor = clamp(normalToWorld[0][3], 0.0f, 1.0f);
+                float2 scale = float2(normalToWorld[3][0], normalToWorld[3][1]);
+                float2 offset = float2(normalToWorld[3][2], normalToWorld[3][3]);
+                fragInputs.texCoord0.xy = fragInputs.texCoord0.xy * scale + offset;
+                fragInputs.texCoord1.xy = fragInputs.texCoord1.xy * scale + offset;
+                fragInputs.texCoord2.xy = fragInputs.texCoord2.xy * scale + offset;
+                //fragInputs.texCoord3.xy = fragInputs.texCoord3.xy * scale + offset;
+        #else
+                float fadeFactor = 1.0;
+        #endif
+                SurfaceDescriptionInputs surfaceDescriptionInputs = FragInputsToSurfaceDescriptionInputs(fragInputs, V);
+                SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(m2ps, surfaceDescriptionInputs);
+                fragInputs.tangentToWorld = float3x3(surfaceDescriptionInputs.WorldSpaceTangent, surfaceDescriptionInputs.WorldSpaceBiTangent, surfaceDescriptionInputs.WorldSpaceNormal);
+
+                // setup defaults -- these are used if the graph doesn't output a value
+                ZERO_INITIALIZE(DecalSurfaceData, surfaceData);
+        
+        #if _MATERIAL_AFFECTS_EMISSION
+                // surfaceData.emissive.rgb = surfaceDescription.Emission.rgb * fadeFactor;
+        #endif
+        
+                // copy across graph values, if defined
+        #if _MATERIAL_AFFECTS_ALBEDO
+                surfaceData.baseColor.xyz = surfaceDescription.Albedo;
+                surfaceData.baseColor.w = surfaceDescription.AlphaAlbedo * fadeFactor;
+                if(surfaceData.baseColor.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_DIFFUSE;
+                    #endif
+                }
+        #endif
+        
+        #if _MATERIAL_AFFECTS_NORMAL
+            #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) 
+                surfaceData.normalWS.xyz = mul((float3x3)normalToWorld, surfaceDescription.Normal);
+            #elif (SHADERPASS == SHADERPASS_DBUFFER_MESH) || (SHADERPASS == SHADERPASS_FORWARD_PREVIEW)
+                // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(surfaceDescription.Normal, fragInputs.tangentToWorld));
+            #endif
+                surfaceData.normalWS.w = surfaceDescription.AlphaNormal * fadeFactor;
+                if(surfaceData.normalWS.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_NORMAL;
+                    #endif
+                }
+        #else
+            #if (SHADERPASS == SHADERPASS_FORWARD_PREVIEW) // Default to vertex normal
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(float3(0.0, 0.0, 0.1), fragInputs.tangentToWorld));
+            #endif
+        #endif
+        
+        #if _MATERIAL_AFFECTS_MASKMAP
+                surfaceData.mask.z = surfaceDescription.Smoothness;                                    
+            #ifdef DECALS_4RT
+                surfaceData.mask.x = surfaceDescription.Metallic;
+                surfaceData.mask.y = surfaceDescription.Occlusion;
+            #endif
+        
+                surfaceData.mask.w = surfaceDescription.MAOSOpacity * fadeFactor;
+            #ifdef DECALS_4RT
+                surfaceData.MAOSBlend.x = surfaceDescription.MAOSOpacity * fadeFactor;
+                surfaceData.MAOSBlend.y = surfaceDescription.MAOSOpacity * fadeFactor;
+            #endif
+        
+            if (surfaceData.mask.w > 0)
+            {
+               #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+               surfaceData.HTileMask |= DBUFFERHTILEBIT_MASK;
+               #endif
+            }                                                        
+        #endif
+        
+            }
+        
+            //-------------------------------------------------------------------------------------
+            // Pass Includes
+            //-------------------------------------------------------------------------------------
+                //MS_PASS_DECAL
+            //-------------------------------------------------------------------------------------
+            // End Pass Includes
+            //-------------------------------------------------------------------------------------
+        
+            ENDHLSL
+        }
+        
+        Pass
+        { 
+            // based on DecalPass.template
+            Name "ShaderGraph_DBufferMesh4RT"
+            Tags { "LightMode" = "ShaderGraph_DBufferMesh4RT" }
+        
+            //-------------------------------------------------------------------------------------
+            // Render Modes (Blend, Cull, ZTest, Stencil, etc)
+            //-------------------------------------------------------------------------------------
+            Blend 0 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 1 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 2 SrcAlpha OneMinusSrcAlpha, Zero OneMinusSrcAlpha 
+            Blend 3 Zero OneMinusSrcColor
+        
+            
+            ZTest LEqual
+        
+            ZWrite Off
+        
+            
+            // Stencil setup
+        Stencil
+        {
+           WriteMask 8
+           Ref  8
+        Comp Always
+        Pass Replace
+        }
+        
+            ColorMask RGBA 2 ColorMask RG 3
+        
+            //-------------------------------------------------------------------------------------
+            // End Render Modes
+            //-------------------------------------------------------------------------------------
+        
+            HLSLPROGRAM
+        
+            #pragma target 4.5
+            #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+            //#pragma enable_d3d11_debug_symbols
+        
+            #pragma multi_compile_instancing
+        
+            //-------------------------------------------------------------------------------------
+            // Variant Definitions (active field translations to HDRP defines)
+            //-------------------------------------------------------------------------------------
+            #define _MATERIAL_AFFECTS_ALBEDO 1
+            #define _MATERIAL_AFFECTS_NORMAL 1
+            #define _MATERIAL_AFFECTS_MASKMAP 1
+            #define _MATERIAL_AFFECTS_EMISSION 1
+        
+            //-------------------------------------------------------------------------------------
+            // End Variant Definitions
+            //-------------------------------------------------------------------------------------
+        
+        //MS_DEFINES
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/FragInputs.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/ShaderPass/ShaderPass.cs.hlsl"
+        
+            //-------------------------------------------------------------------------------------
+            // Defines
+            //-------------------------------------------------------------------------------------
+                    #define SHADERPASS SHADERPASS_DBUFFER_MESH
+                #define DECALS_4RT
+                
+        
+            // this translates the new dependency tracker into the old preprocessor definitions for the existing HDRP shader code
+            #define ATTRIBUTES_NEED_NORMAL
+            #define ATTRIBUTES_NEED_TANGENT
+            #define ATTRIBUTES_NEED_TEXCOORD0
+            // #define ATTRIBUTES_NEED_TEXCOORD1
+            // #define ATTRIBUTES_NEED_TEXCOORD2
+            // #define ATTRIBUTES_NEED_TEXCOORD3
+            #define ATTRIBUTES_NEED_COLOR
+            #define VARYINGS_NEED_POSITION_WS
+            #define VARYINGS_NEED_TANGENT_TO_WORLD
+            #define VARYINGS_NEED_TEXCOORD0
+            // #define VARYINGS_NEED_TEXCOORD1
+            // #define VARYINGS_NEED_TEXCOORD2
+            // #define VARYINGS_NEED_TEXCOORD3
+            #define VARYINGS_NEED_COLOR
+            // #define VARYINGS_NEED_CULLFACE
+            // #define HAVE_MESH_MODIFICATION
+        
+            //-------------------------------------------------------------------------------------
+            // End Defines
+            //-------------------------------------------------------------------------------------
+        
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
+        #ifdef DEBUG_DISPLAY
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Debug/DebugDisplay.hlsl"
+        #endif
+        
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/MaterialUtilities.hlsl"
+            #include "Packages/com.unity.shadergraph/ShaderGraphLibrary/Functions.hlsl" 
+            #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/Decal/Decal.hlsl"
+        
+            
+ 
+        
+        //MS_ADAPTER
+
+            //-------------------------------------------------------------------------------------
+            // Graph generated code
+            //-------------------------------------------------------------------------------------
+                    // Shared Graph Properties (uniform inputs)
+                    CBUFFER_START(UnityPerMaterial)
+                    float _DrawOrder;
+                    float _DecalMeshDepthBias;
+                    //MS_CBUFFER
+                    CBUFFER_END
+                
+                // Pixel Graph Inputs
+                    struct SurfaceDescriptionInputs {
+                        float3 WorldSpaceNormal; // optional
+                        float3 WorldSpaceTangent; // optional
+                        float3 WorldSpaceBiTangent; // optional
+                        float3 WorldSpaceViewDirection; // optional
+                        float3 TangentSpaceViewDirection; // optional
+                        float3 WorldSpacePosition; // optional
+                        float4 uv0; // optional
+                        float4 VertexColor; // optional
+                    };
+                // Pixel Graph Outputs
+                    struct SurfaceDescription
+                    {
+                        float3 Albedo;
+                        float AlphaAlbedo;
+                        float3 Normal;
+                        float AlphaNormal;
+                        float Metallic;
+                        float Occlusion;
+                        float Smoothness;
+                        float3 Specular;
+                        float MAOSOpacity;
+                    };
+                    
+                // Shared Graph Node Functions
+                
+                 //MS_SHARED_INC
+                    
+                    //MS_SHARED_HD
+                     
+                    //MS_VERTEXMOD
+
+                    //MS_AFTERVERTEX
+
+                    //MS_TERRAIN_BODY
+
+                    //MS_BLENDABLE
+
+                    //MS_MAINFUNC
+
+                    SurfaceDescription SurfaceDescriptionFunction(MeshToPS m2ps, inout SurfaceDescriptionInputs IN)
+                    {
+                        MicroSplatLayer l = DoMicroSplat(IN, m2ps);
+
+                        SurfaceDescription surface = (SurfaceDescription)0;
+                        surface.Albedo = l.Albedo;
+                        surface.Normal = l.Normal;
+                        surface.Smoothness = l.Smoothness;
+                        #if _USESPECULARWORKFLOW
+                           surface.Specular = l.Specular;
+                        #endif
+                        surface.Metallic = l.Metallic;
+                        surface.Occlusion = l.Occlusion;
+
+                        surface.AlphaAlbedo = l.Alpha;
+                        surface.AlphaNormal = l.Alpha;
+                        surface.MAOSOpacity = l.Alpha;
+                        return surface;
+                    }
+                    
+            //-------------------------------------------------------------------------------------
+            // End graph generated code
+            //-------------------------------------------------------------------------------------
+        
+        // $include("VertexAnimation.template.hlsl")
+        
+        
+        //-------------------------------------------------------------------------------------
+        // TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+            FragInputs BuildFragInputs(MeshToPS input)
+            {
+                FragInputs output;
+                ZERO_INITIALIZE(FragInputs, output);
+        
+                // Init to some default value to make the computer quiet (else it output 'divide by zero' warning even if value is not used).
+                // TODO: this is a really poor workaround, but the variable is used in a bunch of places
+                // to compute normals which are then passed on elsewhere to compute other values...
+                output.tangentToWorld = k_identity3x3;
+                output.positionSS = input.positionCS;       // input.positionCS is SV_Position
+        
+                output.positionRWS = input.positionRWS;
+                output.tangentToWorld = BuildTangentToWorld(input.tangentWS, input.normalWS);
+                output.texCoord0 = input.texCoord0;
+                // output.texCoord1 = input.texCoord1;
+                // output.texCoord2 = input.texCoord2;
+                // output.texCoord3 = input.texCoord3;
+                output.color = input.color;
+                #if _DOUBLESIDED_ON && SHADER_STAGE_FRAGMENT
+                output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #elif SHADER_STAGE_FRAGMENT
+                // output.isFrontFace = IS_FRONT_VFACE(input.cullFace, true, false);
+                #endif // SHADER_STAGE_FRAGMENT
+        
+                return output;
+            }
+        
+            SurfaceDescriptionInputs FragInputsToSurfaceDescriptionInputs(FragInputs input, float3 viewWS)
+            {
+                SurfaceDescriptionInputs output;
+                ZERO_INITIALIZE(SurfaceDescriptionInputs, output);
+        
+                output.WorldSpaceNormal =            normalize(input.tangentToWorld[2].xyz);
+                // output.ObjectSpaceNormal =           mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_M);           // transposed multiplication by inverse matrix to handle normal scale
+                // output.ViewSpaceNormal =             mul(output.WorldSpaceNormal, (float3x3) UNITY_MATRIX_I_V);         // transposed multiplication by inverse matrix to handle normal scale
+                // output.TangentSpaceNormal =          float3(0.0f, 0.0f, 1.0f);
+                output.WorldSpaceTangent =           input.tangentToWorld[0].xyz;
+                // output.ObjectSpaceTangent =          TransformWorldToObjectDir(output.WorldSpaceTangent);
+                // output.ViewSpaceTangent =            TransformWorldToViewDir(output.WorldSpaceTangent);
+                // output.TangentSpaceTangent =         float3(1.0f, 0.0f, 0.0f);
+                output.WorldSpaceBiTangent =         input.tangentToWorld[1].xyz;
+                // output.ObjectSpaceBiTangent =        TransformWorldToObjectDir(output.WorldSpaceBiTangent);
+                // output.ViewSpaceBiTangent =          TransformWorldToViewDir(output.WorldSpaceBiTangent);
+                // output.TangentSpaceBiTangent =       float3(0.0f, 1.0f, 0.0f);
+                output.WorldSpaceViewDirection =     normalize(viewWS);
+                // output.ObjectSpaceViewDirection =    TransformWorldToObjectDir(output.WorldSpaceViewDirection);
+                // output.ViewSpaceViewDirection =      TransformWorldToViewDir(output.WorldSpaceViewDirection);
+                float3x3 tangentSpaceTransform =     float3x3(output.WorldSpaceTangent,output.WorldSpaceBiTangent,output.WorldSpaceNormal);
+                output.TangentSpaceViewDirection =   mul(tangentSpaceTransform, output.WorldSpaceViewDirection);
+                output.WorldSpacePosition =          (input.positionRWS);
+                // output.ObjectSpacePosition =         TransformWorldToObject(input.positionRWS);
+                // output.ViewSpacePosition =           TransformWorldToView(input.positionRWS);
+                // output.TangentSpacePosition =        float3(0.0f, 0.0f, 0.0f);
+                // output.ScreenPosition =              ComputeScreenPos(TransformWorldToHClip(input.positionRWS), _ProjectionParams.x);
+                output.uv0 =                         input.texCoord0;
+                // output.uv1 =                         input.texCoord1;
+                // output.uv2 =                         input.texCoord2;
+                // output.uv3 =                         input.texCoord3;
+                output.VertexColor =                 input.color;
+                // output.FaceSign =                    input.isFrontFace;
+                // output.TimeParameters =              _TimeParameters.xyz; // This is mainly for LW as HD overwrite this value
+        
+                return output;
+            }
+        
+            // existing HDRP code uses the combined function to go directly from packed to frag inputs
+            FragInputs UnpackVaryingsMeshToFragInputs(MeshToPS input)
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return BuildFragInputs(input);
+            }
+        
+        //-------------------------------------------------------------------------------------
+        // END TEMPLATE INCLUDE : SharedCode.template.hlsl
+        //-------------------------------------------------------------------------------------
+        
+        
+            void GetSurfaceData(MeshToPS m2ps, inout FragInputs fragInputs, float3 V, PositionInputs posInput, out DecalSurfaceData surfaceData)
+            {
+        #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) || (SHADERPASS == SHADERPASS_FORWARD_EMISSIVE_PROJECTOR)
+                float4x4 normalToWorld = UNITY_ACCESS_INSTANCED_PROP(Decal, _NormalToWorld);
+                float fadeFactor = clamp(normalToWorld[0][3], 0.0f, 1.0f);
+                float2 scale = float2(normalToWorld[3][0], normalToWorld[3][1]);
+                float2 offset = float2(normalToWorld[3][2], normalToWorld[3][3]);
+                fragInputs.texCoord0.xy = fragInputs.texCoord0.xy * scale + offset;
+                fragInputs.texCoord1.xy = fragInputs.texCoord1.xy * scale + offset;
+                fragInputs.texCoord2.xy = fragInputs.texCoord2.xy * scale + offset;
+                //fragInputs.texCoord3.xy = fragInputs.texCoord3.xy * scale + offset;
+        #else
+                float fadeFactor = 1.0;
+        #endif
+                SurfaceDescriptionInputs surfaceDescriptionInputs = FragInputsToSurfaceDescriptionInputs(fragInputs, V);
+                SurfaceDescription surfaceDescription = SurfaceDescriptionFunction(m2ps, surfaceDescriptionInputs);
+                fragInputs.tangentToWorld = float3x3(surfaceDescriptionInputs.WorldSpaceTangent, surfaceDescriptionInputs.WorldSpaceBiTangent, surfaceDescriptionInputs.WorldSpaceNormal);
+
+                // setup defaults -- these are used if the graph doesn't output a value
+                ZERO_INITIALIZE(DecalSurfaceData, surfaceData);
+        
+        #if _MATERIAL_AFFECTS_EMISSION
+                // surfaceData.emissive.rgb = surfaceDescription.Emission.rgb * fadeFactor;
+        #endif
+        
+                // copy across graph values, if defined
+        #if _MATERIAL_AFFECTS_ALBEDO
+                surfaceData.baseColor.xyz = surfaceDescription.Albedo;
+                surfaceData.baseColor.w = surfaceDescription.AlphaAlbedo * fadeFactor;
+                if(surfaceData.baseColor.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_DIFFUSE;
+                    #endif
+                }
+        #endif
+        
+        #if _MATERIAL_AFFECTS_NORMAL
+            #if (SHADERPASS == SHADERPASS_DBUFFER_PROJECTOR) 
+                surfaceData.normalWS.xyz = mul((float3x3)normalToWorld, surfaceDescription.Normal);
+            #elif (SHADERPASS == SHADERPASS_DBUFFER_MESH) || (SHADERPASS == SHADERPASS_FORWARD_PREVIEW)
+                // We need to normalize as we use mikkt tangent space and this is expected (tangent space is not normalize)
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(surfaceDescription.Normal, fragInputs.tangentToWorld));
+            #endif
+                surfaceData.normalWS.w = surfaceDescription.AlphaNormal * fadeFactor;
+                if(surfaceData.normalWS.w > 0)
+                {
+                    #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                    surfaceData.HTileMask |= DBUFFERHTILEBIT_NORMAL;
+                    #endif
+                }
+        #else
+            #if (SHADERPASS == SHADERPASS_FORWARD_PREVIEW) // Default to vertex normal
+                surfaceData.normalWS.xyz = normalize(TransformTangentToWorld(float3(0.0, 0.0, 0.1), fragInputs.tangentToWorld));
+            #endif
+        #endif
+        
+        #if _MATERIAL_AFFECTS_MASKMAP
+                surfaceData.mask.z = surfaceDescription.Smoothness;                                    
+            #ifdef DECALS_4RT
+                surfaceData.mask.x = surfaceDescription.Metallic;
+                surfaceData.mask.y = surfaceDescription.Occlusion;
+            #endif
+        
+                surfaceData.mask.w = surfaceDescription.MAOSOpacity * fadeFactor;
+            #ifdef DECALS_4RT
+                surfaceData.MAOSBlend.x = surfaceDescription.MAOSOpacity * fadeFactor;
+                surfaceData.MAOSBlend.y = surfaceDescription.MAOSOpacity * fadeFactor;
+            #endif
+        
+            if (surfaceData.mask.w > 0)
+            {
+                #if (SHADER_LIBRARY_VERSION_MAJOR < 10)
+                surfaceData.HTileMask |= DBUFFERHTILEBIT_MASK;
+                #endif
+            }                                                        
+        #endif
+        
+            }
+        
+            //-------------------------------------------------------------------------------------
+            // Pass Includes
+            //-------------------------------------------------------------------------------------
+                //MS_PASS_DECAL
+            //-------------------------------------------------------------------------------------
+            // End Pass Includes
+            //-------------------------------------------------------------------------------------
+        
+            ENDHLSL
+        }
+        
+        

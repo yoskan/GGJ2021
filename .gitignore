@@ -1,2 +1,6 @@
 /Borbs/Library/
 /Borbs/Temp/
+*.sbs
+/Borbs/Assets/MicroSplat/Core/Documentation/*.pdf
+*.pdf
+/Borbs/Assets/Samples/
