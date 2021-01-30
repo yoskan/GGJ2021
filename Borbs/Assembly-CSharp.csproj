@@ -621,6 +621,9 @@
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
     </Reference>
+    <Reference Include="Cinemachine">
+      <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Cinemachine.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.VSCode.Editor">
       <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Unity.VSCode.Editor.dll</HintPath>
     </Reference>
@@ -657,6 +660,9 @@
     <Reference Include="Unity.RenderPipelines.HighDefinition.Config.Runtime">
       <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Unity.RenderPipelines.HighDefinition.Config.Runtime.dll</HintPath>
     </Reference>
+    <Reference Include="com.unity.cinemachine.editor">
+      <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/com.unity.cinemachine.editor.dll</HintPath>
+    </Reference>
     <Reference Include="Unity.VisualEffectGraph.Editor">
       <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Unity.VisualEffectGraph.Editor.dll</HintPath>
     </Reference>
@@ -674,12 +680,6 @@
     </Reference>
     <Reference Include="UnityEditor.UI">
       <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/UnityEditor.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="Cinemachine">
-      <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/Cinemachine.dll</HintPath>
-    </Reference>
-    <Reference Include="com.unity.cinemachine.editor">
-      <HintPath>C:/Users/BaibaG/Desktop/GGJ 2021 - Borbs/GGJ2021/Borbs/Library/ScriptAssemblies/com.unity.cinemachine.editor.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup></ItemGroup>
