@@ -26,7 +26,7 @@ Material:
   m_ShaderKeywords: _ALPHATEST_ON _MATERIAL_FEATURE_SUBSURFACE_SCATTERING _MATERIAL_FEATURE_TRANSMISSION
     _NORMALMAP _NORMALMAP_TANGENT_SPACE _SUBSURFACE_MASK_MAP _THICKNESSMAP
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap:
@@ -142,7 +142,7 @@ Material:
     - _ATDistance: 1
     - _AddPrecomputedVelocity: 0
     - _AlbedoAffectEmissive: 0
-    - _AlphaClipthreshold: 0.295
+    - _AlphaClipthreshold: 0.42
     - _AlphaCutoff: 0.689
     - _AlphaCutoffEnable: 1
     - _AlphaCutoffPostpass: 0.5
@@ -221,7 +221,7 @@ Material:
     - _RefractionModel: 0
     - _RenderQueueType: 1
     - _RequireSplitLighting: 0
-    - _Roughness: -0.64
+    - _Roughness: 0
     - _SSRefractionProjectionModel: 0
     - _Smoothness: 0.253
     - _SmoothnessRemapMax: 1
@@ -261,8 +261,8 @@ Material:
     - _UseShadowThreshold: 0
     - _WindDensity: 0.26
     - _WindSpeed: 1
-    - _WindStrenght_X: 1
-    - _WindStrenght_Y: 1
+    - _WindStrenght_X: 0.2
+    - _WindStrenght_Y: 0.2
     - _YGradient: 0
     - _ZTestDepthEqualForOpaque: 3
     - _ZTestGBuffer: 3

@@ -75,11 +75,13 @@
     <Compile Include="Assets\Scripts\Art\SetDressingData.cs" />
     <Compile Include="Assets\Scripts\Art\SetDressingPrefab.cs" />
     <Compile Include="Assets\Scripts\Art\SnapToGround.cs" />
+    <Compile Include="Assets\Scripts\Art\Vector3Util.cs" />
+    <Compile Include="Assets\Scripts\Art\WorldBuilding\Runtime\GameObjectExtensions.cs" />
+    <Compile Include="Assets\Scripts\Art\WorldBuilding\Runtime\InstancePainter.cs" />
+    <Compile Include="Assets\Scripts\Art\WorldBuilding\Runtime\SmartObject.cs" />
     <Compile Include="Assets\Scripts\Camera\SimpleCameraController.cs" />
+    <Compile Include="Assets\Scripts\Nest.cs" />
     <Compile Include="Assets\Scripts\PlayerCharacterScript.cs" />
-    <Compile Include="Assets\Scripts\WorldBuilding\Runtime\GameObjectExtensions.cs" />
-    <Compile Include="Assets\Scripts\WorldBuilding\Runtime\InstancePainter.cs" />
-    <Compile Include="Assets\Scripts\WorldBuilding\Runtime\SmartObject.cs" />
     <None Include="Assets\Samples\Terrain Tools\0.1.0-preview\Terrain Assets\ThirdPartyNotices.txt" />
     <None Include="Assets\MicroSplat\Triplanar\Examples\Scene\MicroSplatData\MicroSplat.shader" />
     <None Include="Assets\MicroSplatData\MicroSplat.shader" />
