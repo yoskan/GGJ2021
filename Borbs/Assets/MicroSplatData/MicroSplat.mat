@@ -103,5 +103,5 @@ Material:
     m_Colors:
     - _DoubleSidedConstants: {r: 1, g: 1, b: -1, a: 0}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
-    - _TriplanarUVScale: {r: 1, g: 1, b: 0, a: 0}
+    - _TriplanarUVScale: {r: 2, g: 2, b: 0, a: 0}
     - _UVScale: {r: 45, g: 45, b: 0, a: 0}

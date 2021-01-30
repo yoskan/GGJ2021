@@ -19,7 +19,7 @@ public class Nest : MonoBehaviour
         foreach (GameObject player in Pla)
         {
             Players.Add(player.GetComponent<PlayerCharacterScript>());
-            if (player.ID == NestID)
+            if (player.GetComponent<PlayerCharacterScript>().playerID == NestID)
             {
                 Myborb = player.GetComponent<PlayerCharacterScript>();
             }

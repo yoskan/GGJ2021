@@ -82,7 +82,6 @@
     <Compile Include="Assets\Scripts\Camera\SimpleCameraController.cs" />
     <Compile Include="Assets\Scripts\Nest.cs" />
     <Compile Include="Assets\Scripts\PlayerCharacterScript.cs" />
-    <None Include="Assets\Samples\Terrain Tools\0.1.0-preview\Terrain Assets\ThirdPartyNotices.txt" />
     <None Include="Assets\MicroSplat\Triplanar\Examples\Scene\MicroSplatData\MicroSplat.shader" />
     <None Include="Assets\MicroSplatData\MicroSplat.shader" />
     <None Include="Assets\MicroSplat\Triplanar\Examples\Scene\MicroSplatData\MicroSplat_Base.shader" />
