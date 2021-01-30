@@ -7,6 +7,7 @@ public class PlayerCharacterScript : MonoBehaviour
     public Camera maincamera;
     private float cameraAngle;
     private Rigidbody myrigidbody;
+    public int playerID = 1;
     [SerializeField]
     private bool isgrounded = true;
     [SerializeField]
@@ -32,6 +33,7 @@ public class PlayerCharacterScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Ter = GameObject.Find("Terrain").GetComponent<Terrain>();
         myrigidbody = gameObject.GetComponent<Rigidbody>();
         lowerspeed = speed * .1f;
         maxspeed = speed;
@@ -40,8 +42,8 @@ public class PlayerCharacterScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        float horizontal = Input.GetAxisRaw("Horizontal "+playerID);
+        float vertical = Input.GetAxisRaw("Vertical "+playerID);
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
         //bORB is at the mercy of physics ;(
