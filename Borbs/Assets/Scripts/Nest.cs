@@ -8,6 +8,7 @@ public class Nest : MonoBehaviour
     static public List<PlayerCharacterScript> Players = new List<PlayerCharacterScript>();
     public PlayerCharacterScript Myborb = null;
     public float Dunkrange = 1.0f;
+    public float Intervallcheck = 1.0f;
 
     public void Awake()
     {
@@ -24,6 +25,7 @@ public class Nest : MonoBehaviour
                 Myborb = player.GetComponent<PlayerCharacterScript>();
             }
         }
+        InvokeRepeating(nameof(CheckIfPlayerNear) , 0 , Intervallcheck);
     }
 
     public void CheckIfPlayerNear()
