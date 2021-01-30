@@ -28,6 +28,9 @@ public class PlayerCharacterScript : MonoBehaviour
 
     float turnSmoothVel;
 
+    public AudioClip[] audioClips;
+    private AudioSource audioSource;
+
     public Terrain Ter;
 
     // Start is called before the first frame update
@@ -37,6 +40,7 @@ public class PlayerCharacterScript : MonoBehaviour
         myrigidbody = gameObject.GetComponent<Rigidbody>();
         lowerspeed = speed * .1f;
         maxspeed = speed;
+        audioSource = gameObject.GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -45,6 +49,12 @@ public class PlayerCharacterScript : MonoBehaviour
         float horizontal = Input.GetAxisRaw("Horizontal "+playerID);
         float vertical = Input.GetAxisRaw("Vertical "+playerID);
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
+        
+        if (Input.GetButtonDown("Squawk "+playerID))
+        {
+            Squawk();
+        }
+
 
         //bORB is at the mercy of physics ;(
         if(!isgrounded)
@@ -91,7 +101,7 @@ public class PlayerCharacterScript : MonoBehaviour
     // when bORB collides
     private void Collision(Collider collider)
     {
-        Debug.Log(myrigidbody.velocity.magnitude);
+        //Debug.Log(myrigidbody.velocity.magnitude);
         if (myrigidbody.velocity.magnitude < 3)
         {
             return;
@@ -120,5 +130,13 @@ public class PlayerCharacterScript : MonoBehaviour
         recoverytimer = 0f;
         recovering = false;
         speed = maxspeed;
+    }
+
+
+    private void Squawk()
+    {
+        Debug.Log("Squawk!!");
+        audioSource.clip = audioClips[Random.Range(0, audioClips.Length)];
+        audioSource.Play();
     }
 }
