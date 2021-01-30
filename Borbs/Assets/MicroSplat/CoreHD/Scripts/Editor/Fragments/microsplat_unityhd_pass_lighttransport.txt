@@ -1,0 +1,49 @@
+﻿#if SHADERPASS != SHADERPASS_LIGHT_TRANSPORT
+#error SHADERPASS_is_not_correctly_define
+#endif
+
+
+
+
+float4 Frag(PackedVaryingsToPS packedInput) : SV_Target
+{
+    FragInputs input = UnpackVaryingsMeshToFragInputs(packedInput.vmesh);
+
+    // input.positionSS is SV_Position
+    PositionInputs posInput = GetPositionInput(input.positionSS.xy, _ScreenSize.zw, input.positionSS.z, input.positionSS.w, input.positionRWS);
+
+#ifdef VARYINGS_NEED_POSITION_WS
+    float3 V = GetWorldSpaceNormalizeViewDir(input.positionRWS);
+#else
+    // Unused
+    float3 V = float3(1.0, 1.0, 1.0); // Avoid the division by 0
+#endif
+
+    SurfaceData surfaceData;
+    BuiltinData builtinData;
+    GetSurfaceAndBuiltinData(packedInput.vmesh, input, V, posInput, surfaceData, builtinData);
+
+    // no debug apply during light transport pass
+
+    BSDFData bsdfData = ConvertSurfaceDataToBSDFData(input.positionSS.xy, surfaceData);
+    LightTransportData lightTransportData = GetLightTransportData(surfaceData, builtinData, bsdfData);
+
+    // This shader is call two times. Once for getting emissiveColor, the other time to get diffuseColor
+    // We use unity_MetaFragmentControl to make the distinction.
+    float4 res = float4(0.0, 0.0, 0.0, 1.0);
+
+    if (unity_MetaFragmentControl.x)
+    {
+        // Apply diffuseColor Boost from LightmapSettings.
+        // put abs here to silent a warning, no cost, no impact as color is assume to be positive.
+        res.rgb = clamp(pow(abs(lightTransportData.diffuseColor), saturate(unity_OneOverOutputBoost)), 0, unity_MaxOutputValue);
+    }
+
+    if (unity_MetaFragmentControl.y)
+    {
+        // emissive use HDR format
+        res.rgb = lightTransportData.emissiveColor;
+    }
+
+    return res;
+}

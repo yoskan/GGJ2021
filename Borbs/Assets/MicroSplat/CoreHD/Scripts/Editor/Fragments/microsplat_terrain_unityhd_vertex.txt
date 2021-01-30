@@ -1,0 +1,223 @@
+﻿
+
+float4 ConstructTerrainTangent(float3 normal, float3 positiveZ)
+{
+    // Consider a flat terrain. It should have tangent be (1, 0, 0) and bitangent be (0, 0, 1) as the UV of the terrain grid mesh is a scale of the world XZ position.
+    // In CreateTangentToWorld function (in SpaceTransform.hlsl), it is cross(normal, tangent) * sgn for the bitangent vector.
+    // It is not true in a left-handed coordinate system for the terrain bitangent, if we provide 1 as the tangent.w. It would produce (0, 0, -1) instead of (0, 0, 1).
+    // Also terrain's tangent calculation was wrong in a left handed system because cross((0,0,1), terrainNormalOS) points to the wrong direction as negative X.
+    // Therefore all the 4 xyzw components of the tangent needs to be flipped to correct the tangent frame.
+    // (See TerrainLitData.hlsl - GetSurfaceAndBuiltinData)
+    float3 tangent = cross(normal, positiveZ);
+    return float4(tangent, -1);
+}
+
+
+AttributesMesh ApplyMeshModification(AttributesMesh input, float3 timeParameters)
+{
+   #if defined(UNITY_INSTANCING_ENABLED) && _MICROTERRAIN && !_TESSDISTANCE
+      float2 patchVertex = input.positionOS.xy;
+      float4 instanceData = UNITY_ACCESS_INSTANCED_PROP(Terrain, _TerrainPatchInstanceData);
+
+      float2 sampleCoords = (patchVertex.xy + instanceData.xy) * instanceData.z; // (xy + float2(xBase,yBase)) * skipScale
+
+      float height = UnpackHeightmap(_TerrainHeightmapTexture.Load(int3(sampleCoords, 0)));
+
+      input.positionOS.xz = sampleCoords * _TerrainHeightmapScale.xz;
+      input.positionOS.y = height * _TerrainHeightmapScale.y;
+
+      #ifdef ATTRIBUTES_NEED_NORMAL
+         input.normalOS = float3(0,1,0);
+      #endif
+
+      #if defined(VARYINGS_NEED_TEXCOORD0) || defined(VARYINGS_DS_NEED_TEXCOORD0)
+         input.uv0.xy = sampleCoords * _TerrainHeightmapRecipSize.zw;
+      #endif
+
+   #elif _PERPIXNORMAL
+       input.normalOS = float3(0,1,0);
+   #endif
+
+ 
+   #if !_MICROMESH && !_MICROMESHTERRAIN && !_MICROVERTEXMESH && !_MICROPOLARISMESH
+       input.tangentOS = ConstructTerrainTangent(input.normalOS, float3(0, 0, 1));
+   #endif
+
+   
+
+    return input;
+}
+
+
+MeshToPS VertMesh(AttributesMesh input)
+{
+    MeshToPS output = (MeshToPS)0;
+
+    UNITY_SETUP_INSTANCE_ID(input);
+    UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+#if defined(HAVE_MESH_MODIFICATION)
+    input = ApplyMeshModification(input, _TimeParameters.xyz);
+#endif
+
+    // This return the camera relative position (if enable)
+    float3 positionRWS = TransformObjectToWorld(input.positionOS);
+    float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+    float4 tangentWS = float4(TransformObjectToWorldDir(input.tangentOS.xyz), input.tangentOS.w);
+
+     // Do vertex modification in camera relative space (if enable)
+#if defined(HAVE_VERTEX_MODIFICATION)
+    ApplyVertexModification(input, normalWS, positionRWS, _TimeParameters.xyz);
+#endif
+
+
+    output.positionRWS = positionRWS;
+    output.positionCS = TransformWorldToHClip(positionRWS);
+    output.normalWS = normalWS;
+    output.tangentWS = tangentWS;
+
+
+#if defined(VARYINGS_NEED_TEXCOORD0) || defined(VARYINGS_DS_NEED_TEXCOORD0)
+    output.texCoord0 = input.uv0;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD1) || defined(VARYINGS_DS_NEED_TEXCOORD1)
+    output.texCoord1 = input.uv1;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD2) || defined(VARYINGS_DS_NEED_TEXCOORD2)
+    output.texCoord2 = input.uv2;
+#endif
+#if defined(VARYINGS_NEED_TEXCOORD3) || defined(VARYINGS_DS_NEED_TEXCOORD3)
+    output.texCoord3 = input.uv3;
+#endif
+#if defined(VARYINGS_NEED_COLOR) || defined(VARYINGS_DS_NEED_COLOR)
+    output.color = input.color;
+#endif
+
+#if !_TESSDISTANCE && !defined(SCENESELECTIONPASS) // no tess, encode
+   #if _MICROVERTEXMESH 
+      Input inp = (Input)0;
+      EncodeVertex(ToAppData(input), inp);
+      FromInput(output, inp);
+   #elif _MEGASPLAT
+      Input inp = (Input)0;
+      EncodeMegaSplatVertex(ToAppData(input), inp);
+      FromInput(output, inp);
+   #elif _MICRODIGGERMESH
+      Input inp = (Input)0;
+      DiggerEncodeVertex(ToAppData(input), inp);
+      FromInput(output, inp);
+   #endif
+#endif // tess distance
+
+
+
+#if _TESSDISTANCE && !defined(SCENESELECTIONPASS)
+   CopyMSVertexData(input, output)
+#endif
+
+
+
+    return output;
+}
+
+
+#if (SHADERPASS == SHADERPASS_DBUFFER_MESH)
+void MeshDecalsPositionZBias(inout VaryingsToPS input)
+{
+#if defined(UNITY_REVERSED_Z)
+    input.vmesh.positionCS.z -= _DecalMeshDepthBias;
+#else
+    input.vmesh.positionCS.z += _DecalMeshDepthBias;
+#endif
+}
+#endif
+
+
+
+
+#if (SHADERPASS == SHADERPASS_LIGHT_TRANSPORT)
+
+// This was not in constant buffer in original unity, so keep outiside. But should be in as ShaderRenderPass frequency
+float unity_OneOverOutputBoost;
+float unity_MaxOutputValue;
+
+CBUFFER_START(UnityMetaPass)
+// x = use uv1 as raster position
+// y = use uv2 as raster position
+bool4 unity_MetaVertexControl;
+
+// x = return albedo
+// y = return normal
+bool4 unity_MetaFragmentControl;
+CBUFFER_END
+
+MeshToPS Vert(AttributesMesh inputMesh)
+{
+    VaryingsToPS output = (VaryingsToPS)0;
+    output.vmesh = (MeshToPS)0;
+
+    UNITY_SETUP_INSTANCE_ID(inputMesh);
+    UNITY_TRANSFER_INSTANCE_ID(inputMesh, output.vmesh);
+
+    // Output UV coordinate in vertex shader
+    float2 uv = float2(0.0, 0.0);
+
+    if (unity_MetaVertexControl.x)
+    {
+        uv = inputMesh.uv1.xy * unity_LightmapST.xy + unity_LightmapST.zw;
+    }
+    else if (unity_MetaVertexControl.y)
+    {
+        uv = inputMesh.uv2.xy * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+    }
+
+    // OpenGL right now needs to actually use the incoming vertex position
+    // so we create a fake dependency on it here that haven't any impact.
+    output.vmesh.positionCS = float4(uv * 2.0 - 1.0, inputMesh.positionOS.z > 0 ? 1.0e-4 : 0.0, 1.0);
+
+#ifdef VARYINGS_NEED_POSITION_WS
+    output.vmesh.positionRWS = TransformObjectToWorld(inputMesh.positionOS);
+#endif
+
+#ifdef VARYINGS_NEED_TANGENT_TO_WORLD
+    // Normal is required for triplanar mapping
+    output.vmesh.normalWS = TransformObjectToWorldNormal(inputMesh.normalOS);
+    // Not required but assign to silent compiler warning
+    output.vmesh.tangentWS = float4(1.0, 0.0, 0.0, 0.0);
+#endif
+
+#ifdef VARYINGS_NEED_TEXCOORD0
+    output.vmesh.texCoord0 = inputMesh.uv0;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD1
+    output.vmesh.texCoord1 = inputMesh.uv1;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD2
+    output.vmesh.texCoord2 = inputMesh.uv2;
+#endif
+#ifdef VARYINGS_NEED_TEXCOORD3
+    output.vmesh.texCoord3 = inputMesh.uv3;
+#endif
+#ifdef VARYINGS_NEED_COLOR
+    output.vmesh.color = inputMesh.color;
+#endif
+
+    return PackVaryingsToPS(output);
+}
+#else
+MeshToPS Vert(AttributesMesh inputMesh)
+{
+    VaryingsToPS varyingsType;
+    varyingsType.vmesh = VertMesh(inputMesh);
+    #if (SHADERPASS == SHADERPASS_DBUFFER_MESH)
+       MeshDecalsPositionZBias(varyingsType);
+    #endif
+    return PackVaryingsToPS(varyingsType);
+}
+
+#endif
+
+
+
+
+ 

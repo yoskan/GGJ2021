@@ -1,0 +1,76 @@
+﻿
+      
+      #define UNITY_DECLARE_TEX2D(name) TEXTURE2D(name); SAMPLER(sampler_##name);
+      #define UNITY_DECLARE_TEX2D_NOSAMPLER(name) TEXTURE2D(name);
+      #define UNITY_DECLARE_TEX2DARRAY(name) TEXTURE2D_ARRAY(name); SAMPLER(sampler_##name);
+      #define UNITY_DECLARE_TEX2DARRAY_NOSAMPLER(tex) TEXTURE2D_ARRAY(tex);
+
+      #define UNITY_SAMPLE_TEX2DARRAY(tex,coord)            SAMPLE_TEXTURE2D_ARRAY(tex, sampler_##tex, coord.xy, coord.z)
+      #define UNITY_SAMPLE_TEX2DARRAY_LOD(tex,coord,lod)    SAMPLE_TEXTURE2D_ARRAY_LOD(tex, sampler_##tex, coord.xy, coord.z, lod)
+      #define UNITY_SAMPLE_TEX2D(tex, coord)                SAMPLE_TEXTURE2D(tex, sampler_##tex, coord)
+      #define UNITY_SAMPLE_TEX2D_SAMPLER(tex, samp, coord)  SAMPLE_TEXTURE2D(tex, sampler_##samp, coord)
+
+     
+      #if defined(UNITY_COMPILER_HLSL)
+         #define UNITY_INITIALIZE_OUTPUT(type,name) name = (type)0;
+      #else
+         #define UNITY_INITIALIZE_OUTPUT(type,name)
+      #endif
+
+      #define sampler2D_float sampler2D
+      #define sampler2D_half sampler2D
+
+      #undef WorldNormalVector
+      #define WorldNormalVector(data, normal) mul(normal, data.TBN)
+      
+
+      half3 UnpackScaleNormal(half4 packednormal, half bumpScale)
+      {
+	     #if defined(UNITY_NO_DXT5nm)
+	        return packednormal.xyz * 2 - 1;
+	     #else
+		     half3 normal;
+		     normal.xy = (packednormal.wy * 2 - 1);
+	        #if (SHADER_TARGET >= 30)
+		        normal.xy *= bumpScale;
+		     #endif
+		     normal.z = sqrt(1.0 - saturate(dot(normal.xy, normal.xy)));
+	        return normal;
+	     #endif
+      }		
+   
+      
+        
+#if defined(UNITY_INSTANCING_ENABLED) 
+    #define ENABLE_TERRAIN_PERPIXEL_NORMAL
+#endif 
+ 
+#ifndef UNITY_TERRAIN_CB_VARS
+    #define UNITY_TERRAIN_CB_VARS
+#endif
+
+#ifndef UNITY_TERRAIN_CB_DEBUG_VARS
+    #define UNITY_TERRAIN_CB_DEBUG_VARS
+#endif
+
+
+
+CBUFFER_START(UnityTerrain)
+    UNITY_TERRAIN_CB_VARS
+    float4 _TerrainHeightmapRecipSize;  // float4(1.0f/width, 1.0f/height, 1.0f/(width-1), 1.0f/(height-1))
+    float4 _TerrainHeightmapScale;      // float4(hmScale.x, hmScale.y / (float)(kMaxHeight), hmScale.z, 0.0f)
+#ifdef DEBUG_DISPLAY
+    UNITY_TERRAIN_CB_DEBUG_VARS
+#endif
+CBUFFER_END
+
+TEXTURE2D(_TerrainHeightmapTexture);
+SAMPLER(sampler_TerrainHeightmapTexture);
+
+#ifdef UNITY_INSTANCING_ENABLED
+    TEXTURE2D(_TerrainNormalmapTexture);
+#endif
+
+UNITY_INSTANCING_BUFFER_START(Terrain)
+   UNITY_DEFINE_INSTANCED_PROP(float4, _TerrainPatchInstanceData)  // float4(xBase, yBase, skipScale, ~)
+UNITY_INSTANCING_BUFFER_END(Terrain)
