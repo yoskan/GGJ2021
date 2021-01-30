@@ -11,15 +11,14 @@ public class PlayerCharacterScript : MonoBehaviour
     private bool isgrounded = true;
     [SerializeField]
     private bool recovering = false;
-    private Quaternion recoveryRotation;
-    private Vector3 recoveryPosition;
+    //private Quaternion recoveryRotation;
+    //private Vector3 recoveryPosition;
     private float recoverytimer;
-    public float recoverytime;
+    public float recoverytime = .3f;
 
-    public float GetUpTime = .5f;
+    public float GetUpTime = .2f;
 
     public float recoverydamp = 5f;
-    private float timetorecover = .5f;
     public float speed = 6f;
     private float maxspeed;
     private float lowerspeed;
@@ -111,7 +110,7 @@ public class PlayerCharacterScript : MonoBehaviour
         recovering = true;
         recoverytimer = 0f;
         myrigidbody.velocity = new Vector3(0, 5f, 0);
-;    }
+    }
     private void FinishRecovery()
     {
         isgrounded = true;
