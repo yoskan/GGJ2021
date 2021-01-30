@@ -9,7 +9,7 @@
 //   RenderLoop : Unity HD
 //////////////////////////////////////////////////////
 
-Shader "Hidden/MicroSplat/Terrain_Base676232951" {
+Shader "Hidden/MicroSplat/Terrain_Base-1322067012" {
    Properties {
       [HideInInspector] _Control0 ("Control0", 2D) = "red" {}
       [HideInInspector] _Control1 ("Control1", 2D) = "black" {}
@@ -145,6 +145,7 @@ Shader "Hidden/MicroSplat/Terrain_Base676232951" {
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -4721,6 +4722,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -9284,6 +9286,7 @@ float4 Frag(PackedVaryingsToPS packedInput) : SV_Target
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -13852,6 +13855,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -18417,6 +18421,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -22984,6 +22989,7 @@ void Frag(  PackedVaryingsToPS packedInput,
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1

@@ -145,6 +145,7 @@ Shader "MicroSplat/Terrain" {
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -4720,6 +4721,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -9282,6 +9284,7 @@ float4 Frag(PackedVaryingsToPS packedInput) : SV_Target
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -13849,6 +13852,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -18413,6 +18417,7 @@ void Frag(  PackedVaryingsToPS packedInput
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -22979,6 +22984,7 @@ void Frag(  PackedVaryingsToPS packedInput,
       #define _MICROTERRAIN 1
       #define _USEGRADMIP 1
       #define _MAX24TEXTURES 1
+      #define _PERTEXTINT 1
       #define _BRANCHSAMPLES 1
       #define _BRANCHSAMPLESAGR 1
       #define _TRIPLANAR 1
@@ -27623,7 +27629,7 @@ void Frag(PackedVaryingsToPS packedInput,
         
 
       }
-   Dependency "BaseMapShader" = "Hidden/MicroSplat/Terrain_Base676232951"
+   Dependency "BaseMapShader" = "Hidden/MicroSplat/Terrain_Base-1322067012"
    CustomEditor "MicroSplatShaderGUI"
    Fallback "Nature/Terrain/Diffuse"
 }
