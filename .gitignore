@@ -4,3 +4,6 @@
 /Borbs/Assets/MicroSplat/Core/Documentation/*.pdf
 *.pdf
 /Borbs/Assets/Samples/
+*.csproj
+*.sln
+*.cache
