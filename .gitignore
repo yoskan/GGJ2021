@@ -4,6 +4,6 @@
 /Borbs/Assets/MicroSplat/Core/Documentation/*.pdf
 *.pdf
 /Borbs/Assets/Samples/
-/Borbs/Assembly-CSharp.csproj
-/Borbs/Assembly-CSharp-Editor.csproj
-/Borbs/Borbs.sln
+*.csproj
+*.sln
+*.cache

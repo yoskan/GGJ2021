@@ -1113,7 +1113,7 @@ Texture2D:
   m_Name: PropTex
   m_ImageContentsHash:
     serializedVersion: 2
-    Hash: 00000000000000000000000000000000
+    Hash: e7f1a6ac8ba14f1d16dc49b5325d4e48
   m_ForcedFallbackFormat: 4
   m_DownscaleFallback: 0
   serializedVersion: 2
